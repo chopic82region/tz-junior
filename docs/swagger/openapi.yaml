@@ -1,0 +1,439 @@
+openapi: 3.0.3
+info:
+  title: tz-junior API
+  version: 1.0.0
+  description: |
+    HTTP API for managing users and subscriptions.
+
+servers:
+  - url: http://localhost:8080
+    description: Local server (default)
+
+tags:
+  - name: Users
+  - name: Subscriptions
+  - name: Filter
+
+paths:
+  /users:
+    post:
+      tags: [Users]
+      summary: Create user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserCreateRequest"
+            examples:
+              example:
+                value:
+                  name: Alice
+                  email: alice@example.com
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    get:
+      tags: [Users]
+      summary: List users
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /users/{id}:
+    get:
+      tags: [Users]
+      summary: Get user by id
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    patch:
+      tags: [Users]
+      summary: Update user
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdateRequest"
+            examples:
+              example:
+                value:
+                  name: Alice Updated
+                  email: alice.updated@example.com
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      tags: [Users]
+      summary: Delete user
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+              examples:
+                example:
+                  value:
+                    message: user deleted successfully
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /subscriptions:
+    post:
+      tags: [Subscriptions]
+      summary: Create subscription
+      description: |
+        Creates a subscription for a user.
+        `end_date` is optional. If omitted, server defaults it to `payment_time + 1 month`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubscriptionCreateRequest"
+            examples:
+              withoutEndDate:
+                value:
+                  user_id: 4b0f8c21-8e54-4cdd-9f0e-2d3bc7860f34
+                  service_name: netflix
+                  price: "10.00"
+                  payment_time: "2026-05-07T12:00:00Z"
+              withEndDate:
+                value:
+                  user_id: 4b0f8c21-8e54-4cdd-9f0e-2d3bc7860f34
+                  service_name: netflix
+                  price: "10.00"
+                  payment_time: "2026-05-07T12:00:00Z"
+                  end_date: "2026-06-07T12:00:00Z"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subscription"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    get:
+      tags: [Subscriptions]
+      summary: List subscriptions
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Subscription"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /subscriptions/{id}:
+    get:
+      tags: [Subscriptions]
+      summary: Get subscription by id
+      parameters:
+        - $ref: "#/components/parameters/SubscriptionId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subscription"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      tags: [Subscriptions]
+      summary: Cancel subscription (delete)
+      parameters:
+        - $ref: "#/components/parameters/SubscriptionId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+              examples:
+                example:
+                  value:
+                    message: subscription canceled successfully
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /filter/total_cost:
+    get:
+      tags: [Filter]
+      summary: Get total cost by filter
+      description: |
+        Calculates sum of subscription prices (stored as text) casted to numeric.
+        All timestamps must be RFC3339 (e.g. `2026-05-07T12:00:00Z`).
+      parameters:
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: created_at
+          in: query
+          required: true
+          description: Start timestamp (RFC3339)
+          schema:
+            type: string
+            format: date-time
+        - name: end
+          in: query
+          required: true
+          description: End timestamp (RFC3339)
+          schema:
+            type: string
+            format: date-time
+        - name: name
+          in: query
+          required: true
+          description: Service name to filter by (equals `service_name`)
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TotalCostResponse"
+              examples:
+                example:
+                  value:
+                    total_cost: "199.99"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+components:
+  parameters:
+    UserId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    SubscriptionId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            example:
+              value:
+                error: некорректные данные
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            example:
+              value:
+                error: запись не найдена
+    Conflict:
+      description: Conflict
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            example:
+              value:
+                error: дубликат записи
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            example:
+              value:
+                error: internal server error
+
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+
+    MessageResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+
+    User:
+      type: object
+      required: [id, name, email, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    UserCreateRequest:
+      type: object
+      required: [name, email]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+
+    UserUpdateRequest:
+      type: object
+      required: [name, email]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+
+    Subscription:
+      type: object
+      required: [id, user_id, service_name, price, payment_time, end_date]
+      properties:
+        id:
+          type: integer
+          format: int64
+        user_id:
+          type: string
+          format: uuid
+        service_name:
+          type: string
+        price:
+          type: string
+          description: Price stored as string, must be numeric (e.g. "199.99")
+        payment_time:
+          type: string
+          format: date-time
+        end_date:
+          type: string
+          format: date-time
+
+    SubscriptionCreateRequest:
+      type: object
+      required: [user_id, service_name, price, payment_time]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        service_name:
+          type: string
+        price:
+          type: string
+        payment_time:
+          type: string
+          format: date-time
+        end_date:
+          type: string
+          format: date-time
+          description: Optional. If omitted, server defaults to payment_time + 1 month.
+
+    TotalCostResponse:
+      type: object
+      required: [total_cost]
+      properties:
+        total_cost:
+          type: string
+          description: Numeric sum returned as string.
+

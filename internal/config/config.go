@@ -23,8 +23,9 @@ type Config struct {
 
 func LoadConfig() (*Config, error) {
 
+	// .env is optional (useful for local dev); production should use real env vars.
 	if err := godotenv.Load(); err != nil {
-		log.Fatalf("")
+		log.Printf("warning: .env not loaded: %v", err)
 	}
 
 	var cfg Config
